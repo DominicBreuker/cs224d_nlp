@@ -1,0 +1,529 @@
+<html>
+	<body>
+
+    <script type="text/javascript" async
+      src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-MML-AM_CHTML">
+    </script>
+
+    <h1 id="task1">1 - Softmax</h1>
+
+    <h2>a) Prove that softmax is invariant to constant offsets!</h2>
+    <p class='equation'>
+      `"softmax"(x)_i = e^(x_i)/(sum_j e^(x_j) )`
+    </p>
+    <p class='equation'>
+      `"softmax"(x+c)_i = e^((x_i + c))/(sum_j e^((x_j + c)) ) = (e^(x_i)e^(c))/(sum_j (e^(x_j)e^(c)) ) = e^(c)/e^(c) * e^(x_i)/(sum_j e^(x_j) ) = e^(x_i)/(sum_j e^(x_j) ) = "softmax"(x)_i`
+    </p>
+
+    <h2>b) Implement softmax</h2>
+    <p>
+      See file q1_softmax.py
+    </p>
+    <p>
+      A naive implementation of softmax is prone to numerical overflows.
+      To implement softmax, you should go to log scale!
+    </p>
+    <p class="equation">
+      `"softmax"(x)_i = exp(log("softmax"(x)_i)) = exp(log(e^(x_i)/(sum_j e^(x_j) ))) = exp(x_i - log(sum_j e^(x_j) ))`
+    </p>
+    <p>
+      Now we can use a trick to compute the log of the sum of the exponents.
+      Let `c = max x_i` be the maximum value in vector x
+    </p>
+    <p class="equation">
+      `log(sum_j e^(x_j)) = log(sum_j e^c/e^c e^(x_j)) = log(e^c sum_j e^(-c)e^(x_j)) = c + log(sum_j e^(x_j - c))`
+    </p>
+    <p>
+      We still have to compute exponents but we made them much smaller than they were before.
+      Plugging our result from above into the softmax function delivers
+    </p>
+    <p class="equation">
+      `"softmax"(x)_i = exp(x_i - log(sum_j e^(x_j) )) = exp(x_i - c - log(sum_j e^(x_j - c))) = e^(x_i - c) / (sum_j e^(x_j - c))`
+    </p>
+
+
+
+    <h1 id="task2">2 - Neural network basics</h1>
+    <h2>a) Gradient of sigmoid</h2>
+    <p>
+      The sigmoid function is defined as `sigma(x) = 1 / (1+e^(-x))`.
+      We must derive the gradient and express it in terms of `sigma(x)`.
+      The reason is that when we implement backpropagation, we will be able to reuse computations from the forward pass.
+      Computing expoentials is expensive compared to additions or subtractions.
+      This makes us a lot faster :)
+      Below, let `z(x) := 1+e^(-x)`
+    </p>
+    <p class="equation">
+      `
+      sigma^'(x)
+      = (del sigma(x)) / (del x)
+      = del / (del x) 1 / (1+e^(-x))
+      = del / (del x) (1+e^(-x))^(-1)
+      = del / (del z) z^(-1) * del / (del x) 1+e^(-x)
+      = -z^(-2) * -e^(-x)
+      = z^(-2) * e^(-x)
+      = e^(-x) / (1+e^(-x))^2
+      = (-1 + 1 + e^(-x)) / (1+e^(-x))^2
+      = (1+e^(-x)) / (1+e^(-x))^2 - 1/(1+e^(-x))^2
+      = 1 / (1+e^(-x)) - (1/(1+e^(-x)))^2
+      = sigma(x) - sigma^2(x)
+      = sigma(x) (1 - sigma(x))
+      `
+    </p>
+
+    <h2>b) Gradient of softmax cross entropy loss</h2>
+    <p>
+      Cross entropy loss is defined as `CE(y,\hat(y)) = - sum_i y_i log(\hat(y_i))`.
+      The predictions `\hat(y)` come from applying softmax to scores `theta`, i.e., `\hat(y) = "softmax"(theta)`.
+      First, let's compute the derivative for CE with respect to `\hat(y)`.
+    </p>
+    <p class="equation">
+      `
+      del / (del \hat(y_k)) CE(y,\hat(y))
+      = del / (del \hat(y_k)) - sum_i y_i log(\hat(y_i))
+      = del / (del \hat(y_k)) - y_k log(\hat(y_k))
+      = - y_k / \hat(y_k)
+      `
+    </p>
+    <p>
+      Note that the derivative will be 0 for all k except if k is the index of the correct class.
+      Next, we compute the gradient for the i'th compoenent of softmax with respect to `theta_i`.
+    </p>
+    <p class="equation">
+      `
+      del / (del theta_i) "softmax"(theta)_i
+      = del / (del theta_i) e^(theta_i) / (sum_j e^(theta_j))
+      = del / (del theta_i) e^(theta_i) (sum_j e^(theta_j))^(-1)
+      = del / (del theta_i) e^(theta_i) * (sum_j e^(theta_j))^(-1) + e^(theta_i) * del / (del theta_i) (sum_j e^(theta_j))^(-1)
+      = e^(theta_i) (sum_j e^(theta_j))^(-1) + e^(theta_i) * - (sum_j e^(theta_j))^(-2) * del / (del theta_i) sum_j e^(theta_j)
+      = "softmax"(theta)_i - (e^(theta_i))^2 / (sum_j e^(theta_j))^2
+      = "softmax"(theta)_i - "softmax"(theta)_i^2
+      = "softmax"(theta)_i (1- "softmax"(theta)_i)
+      `
+    </p>
+    <p>
+      Now, we compte the derivative for the i'th component of softmax with respect to `theta_k`, where we assume `k!=i`.
+    </p>
+    <p class="equation">
+      `
+      del / (del theta_k) "softmax"(theta)_i
+      = del / (del theta_k) e^(theta_i) / (sum_j e^(theta_j))
+      = del / (del theta_k) e^(theta_i) (sum_j e^(theta_j))^(-1)
+      = del / (del theta_k) e^(theta_i) * (sum_j e^(theta_j))^(-1) + e^(theta_i) * del / (del theta_k) (sum_j e^(theta_j))^(-1)
+      = 0 + e^(theta_i) * - (sum_j e^(theta_j))^(-2) * del / (del theta_k) sum_j e^(theta_j)
+      = - (e^(theta_i) e^(theta_k)) / (sum_j e^(theta_j))^(2)
+      = - "softmax"(theta)_i * "softmax"(theta)_k
+      `
+    </p>
+    <p>
+      Now we are ready to compute the overall derivative.
+    </p>
+    <p class="equation">
+      `
+      del / (del theta_i) CE(y,\hat(y)(theta))
+      = del / (del \hat(y_1)(theta)) CE(y,\hat(y)(theta)) del / (del theta_i) \hat(y_1)(theta)+ ... + del / (del \hat(y_d)(theta)) CE(y,\hat(y)(theta))  del / (del theta_i) \hat(y_d)(theta)
+      `
+    </p>
+    <p>
+      Now, since all derivatives of `CE(y,\hat(y)(theta))` w.r.t indices not corresponding to the correct class are 0 (one hot encoding, thus `y_i = 0` for `i!=k`), we assume k is the correct class index and proceed:
+    </p>
+    <p class="equation">
+      `
+      del / (del theta_i) CE(y,\hat(y)(theta))
+      = del / (del \hat(y_k)(theta)) CE(y,\hat(y)(theta)) del / (del theta_i) \hat(y_k)(theta)
+      = - y_k / (\hat(y_k)(theta)) * del / (del theta_i) \hat(y_k)(theta)
+      `
+    </p>
+    <p>
+      Since we defined `\hat(y_k)(theta) = "softmax"(theta)_k` and we know that `y_k = 1` when k is the correct class index, we can subsitute:
+    </p>
+    <p class="equation">
+      `
+      del / (del theta_i) CE(y,\hat(y)(theta))
+      = - 1 / ("softmax"(theta)_k) * del / (del theta_i) "softmax"(theta)_k
+      `
+    </p>
+    <p>
+      If `i = k`, i.e., if we derive theta w.r.t. to element that corresponds to the correct class, we can subsitute the derivative we computed above.
+    </p>
+    <p class="equation">
+      `
+      del / (del theta_i) CE(y,\hat(y)(theta))
+      = - 1 / ("softmax"(theta)_i) * "softmax"(theta)_i (1 - "softmax"(theta)_i)
+      = "softmax"(theta)_i - 1
+      `
+    </p>
+    <p>
+      If `i != k`, i.e., if we derive `theta` w.r.t an element that does not correspond to the correct class, we can subsitute the other derivative we computed above.
+    </p>
+    <p class="equation">
+      `
+      del / (del theta_i) CE(y,\hat(y)(theta))
+      = - 1 / ("softmax"(theta)_k) * - "softmax"(theta)_i * "softmax"(theta)_k
+      = "softmax"(theta)_i
+      `
+    </p>
+    <p>
+      In vecotrized notation, we can thus write the gradient as follows:
+    </p>
+    <p class="equation">
+      `
+      del / (del theta) CE(y,\hat(y))
+      = "softmax"(theta) - y
+      = \hat(y) - y
+      `
+    </p>
+
+    <h2>c) Gradients of simple one-layer neural network</h2>
+
+    <p>
+      We have a one-layer neural network with sigmoid activation function and cross entropy softmax loss.
+      `x in RR^(1 xx D)` is an input vector (treated as row vector).
+      `h in RR^(1 xx H)` is the vector for hidden layer actications.
+      `W_1 in RR^(D xx H)` is the parameter matrix for the hidden layer.
+      `b_1 in RR^(1 xx H)` is the bias vector for the hidden layer.
+      `h = sigma(xW_1+b_1)` computes the hidden layer.
+      `\hat(y) in RR^(1 xx S)` is the softmax output layer.
+      `W_2 in RR(H xx S)` is the parameter matrix for the output layer.
+      `b_2 in RR^S` is the bias vector for the output layer.
+      `\hat(y) = "softmax"(hW_2+b_2)` computes the output layer.
+      `J := CE(y,\hat(y))` is the loss function I assume for this task.
+    </p>
+    <p>
+      We can now start computing the gradients by iteratively applying the chain rule.
+      Let `\hat(y)_(raw) := hW_2 + b_2` be the scores before softmax.
+    </p>
+    <p class="equation">
+      `
+      (del J) / (del \hat(y)_(raw))
+      = del / (del \hat(y)_(raw)) CE(y, \hat(y))
+      = \hat(y) - y := d\hat(y)_(raw) in RR^(1 xx S)
+      `
+    </p>
+    <p>
+      Now we apply the chain rule to get down to a derivative w.r.t. h, i.e., we compute `(del J) / (del h)`.
+      To mkae things explicit, we first look at the derivative w.r.t. a single element of h, i.e., `(del J) / (del h_i)`.
+    </p>
+    <p class="equation">
+      `
+      (del J) / (del h_i)
+      = sum_s (del J) / (del \hat(y)_(raw_s)) (del \hat(y)_(raw_s)) / (del h_i)
+      = sum_s (\hat(y) - y)_s (del sum_k h_k W_(2_(ks))) / (del h_i)
+      = sum_s (\hat(y) - y)_s W_(2_(is))
+      `
+    </p>
+    <p>
+      Writing the gradient `(del J) / (del h)` as a row vector, we get:
+    </p>
+    <p class="equation">
+      `
+      (del J) / (del h)
+      = [(del J) / (del h_1) ... (del J) / (del h_H)]
+      = [sum_s (\hat(y) - y)_s W_(2_(1s)) ,  ... ,  sum_s (\hat(y) - y)_s W_(2_(Hs))]
+      = (\hat(y) - y) W_2^T := dh in RR^(1 xx H)
+      `
+    </p>
+    <p>
+      This was the gradient for the output layer. We proceed with the hidden layer.
+      Let `h_(raw) := xW_1 + b_2` be the scores before sigmoid.
+    </p>
+    <p class="equation">
+      `
+      (del J) / (del h_(raw_i))
+      = sum_(k=1)^H (del J) / (del h_k) (del h_k) / (del h_(raw_i))
+      = sum_(k=1)^H dh_k (del sigma_k(h_(raw))) / (del h_(raw_i))
+      = sum_(k=1)^H dh_k (del sigma_k(h_(raw_k))) / (del h_(raw_i))
+      = dh_i sigma_i(h_(raw_i)) (1 - sigma_i(h_(raw_i)))
+      `
+    </p>
+    <p>
+      Again, we combine all single derivatives `(del J) / (del h_(raw_i))` into one vector `(del J) / (del h_(raw))`.
+    </p>
+    <p class="equation">
+      `
+      (del J) / (del h_(raw))
+      = dh @ sigma(h_(raw)) @ (1- sigma(h_(raw)))
+      := dh_(raw) in RR^(1 xx H)
+      `
+    </p>
+    <p>
+      Finally, we can compute a derivative w.r.t. x.
+      First though we again compute `(del J) / (del x_i)` and later combine the results into a vector.
+    </p>
+    <p class="equation">
+     `
+     (del J) / (del x_i)
+     = sum_(k=1)^H (del J) / (del h_(raw_k)) (del h_(raw_k)) / (del x_i)
+     = sum_(k=1)^H dh_(raw_k) (del sum_(d=1)^D x_d W_(1_(dk))) / (del x_i)
+     = sum_(k=1)^H dh_(raw_k) W_(1_(ik))
+     `
+    </p>
+    <p>
+      Out of these partial derivatives we form a gradient `(del J) / (del x) in RR^(1 xx D)`:
+    </p>
+    <p class="equation">
+      `
+      (del J) / (del x)
+      = [ (del J) / (del x_1) ... (del J) / (del x_D) ]
+      = [ sum_(k=1)^H dh_(raw_k) W_(1_(1k)) , ... , sum_(k=1)^H dh_(raw_k) W_(1_(Dk)) ]
+      = dh_(raw) W_1^T
+      := dx in RR^(1 xx D)
+      `
+    </p>
+
+    <h2>d) How many parameters does thi neural network have?</h2>
+    <p>
+      It has `DH` parameters in `W_1`, `H` parameters in `b_1`, `HS` parameters in `W_2`, and `S` parameters in `b_2`.
+      Thus, the total number is `DH + H + HS + S`.
+    </p>
+
+    <h2>e) Implement sigmoid and its gradient in Python</h2>
+    <p>
+      See file q2_sigmoid.py
+    </p>
+
+    <h2>f) Implement a gradient checker</h2>
+    <p>
+      See file q2_gradcheck.py
+    </p>
+
+    <h2>g) Implement forward and backward pass for single-layer neural network with sigmoid activation</h2>
+    <p>
+      Implementation is in file q2_neural.py. We will need derivatives for all neural network parameters. Thus, we need `(del CE) / (del W1)`, `(del CE) / (del b1)`, `(del CE) / (del W2)` and `(del CE) / (del b2)`. Corresponding formulas are derived below.
+    </p>
+    <p class="equation">
+      `
+      (del J) / (del W_(2_(ij)))
+      = sum_s (del J) / (del \hat(y)_(raw_s)) (del \hat(y)_(raw_s)) / (del W_(2_(ij)))
+      = sum_s d\hat(y)_(raw_s) (del sum_(k=1)^H h_k W_(2_(ks))) / (del W_(2_(ij)))
+      = d\hat(y)_(raw_j) h_i
+      = h_i * d\hat(y)_(raw_j)
+      `
+    </p>
+    <p class="equation">
+      `
+      (del J) / (del W_2)
+      = h^T d\hat(y)_(raw)
+      `
+    </p>
+    <p class="equation">
+      `
+      (del J) / (del b_(2_i))
+      = sum_s (del J) / (del \hat(y)_(raw_s)) (del \hat(y)_(raw_s)) / (del b_(2_i))
+      = sum_s d\hat(y)_(raw_s) (del b_(2_s)) / (del b_(2_i))
+      = d\hat(y)_(raw_i)
+      `
+    </p>
+    <p class="equation">
+      `
+      (del J) / (del b_2)
+      = d\hat(y)_(raw)
+      `
+    </p>
+    <p>
+      The gradients for `W1` and `b_1` are computed analogously.
+    </p>
+
+    <h1 id="task3">word2vec</h1>
+    <h2>Softmax word vector gradients</h2>
+    <p>
+      Assume a word vector `v_c in RR^D` is predited and prediction now is made with the softmax word2vec function:
+    </p>
+    <p class="equation">
+      `
+      \hat(y)_o = p(o|c) = (e^(u_o^(TT) v_c)) / (sum_(w=1)^W e^(u_w^(TT) v_c))
+      `
+    </p>
+    <p>
+      `\hat(y)` shall be the vector of softmax predictions, `y` is the expected word vector.
+      The matrix of all output word vectors is `U = [u_1, ..., u_W] in RR^(W xx D)` (NOTE: one row per word!).
+      The loss function shall be:
+    </p>
+    <p class="equation">
+      `
+      J_("softmax-CE")(o,v_c,U)
+      = CE(y,\hat(y))
+      `
+    </p>
+    <p>
+      The derivative of `CE(y,\hat(y))` is already known.
+      It is `(del CE) / (del \hat(y)) = [0, ..., - y_o / \hat(y)_o, ..., 0]`, where `o` is the index of the correct word.
+    </p>
+    <p>
+      Define `x_w := u_w^(TT) v_c`, then `\hat(y)_o = e^(x_o) / (sum_(w=1)^W e^(x_w)) =  "softmax"(x)`
+      We can use the solutions from above to compute `(del CE) / (del x) = \hat(y) - y in RR^W`
+      Now we can proceed to get a derivative w.r.t. `v_c`:
+    </p>
+    <p class="equation">
+      `
+      (del CE) / (del v_(c_d))
+      = sum_(w=1)^W (del CE) / (del x_w) (del x_w) / (del v_(c_d))
+      = sum_(w=1)^W (del CE) / (del x_w) (del u_w^(TT) v_c) / (del v_(c_d))
+      = sum_(w=1)^W (del CE) / (del x_w) u_(w_d)
+      `
+    </p>
+    <p class="equation">
+      `
+      (del CE) / (del v_c)
+      = U^(TT) (\hat(y) - y) in RR^D
+      `
+    </p>
+
+    <h2>b) Now the output vector gradients</h2>
+    <p>
+      Now derive the gradients for all `u_w` where `w != o`.
+    </p>
+    <p class="equation">
+      `
+      (del CE) / (del u_(w_d))
+      = sum_(i=1)^W (del CE) / (del x_i) (del x_i) / (del u_(w_d))
+      = sum_(i=1)^W (del CE) / (del x_i) (del u_i^(TT) v_c) / (del u_(w_d))
+      = (del CE) / (del x_w) v_(c_d)
+      = \hat(y)_w v_(c_d)
+      `
+    </p>
+    <p>
+      Next look at `u_o`, the vector for the correct word:
+    </p>
+    <p class="equation">
+      `
+      (del CE) / (del u_(w_o))
+      = sum_(i=1)^W (del CE) / (del x_i) (del x_i) / (del u_(w_o))
+      = sum_(i=1)^W (del CE) / (del x_i) (del u_i^(TT) v_c) / (del u_(w_o))
+      = (del CE) / (del x_w) v_(c_d)
+      = (\hat(y)_w - 1) v_(c_d)
+      `
+    </p>
+    <p class="equation">
+      `
+      (del CE) / (del U)
+      = (\hat(y) - y) v_c^(TT) in RR^(W xx D)
+      `
+    </p>
+
+    <h2>c) Now we do a) and b) but for negative sampling loss</h2>
+    <p>
+      We draw K negative samples and assume `o !in {1, ..., K}`.
+      The loss function is `J_("neg-sample")(o,v_c,U) = J_(NS)(o,v_c,U) = - log(sigma(u_o^(TT) v_c)) - sum_(k=1)^K log(sigma(-u_k^(TT) v_c))`.
+      We start by deriving `(del J_(NS)) / (del u_w)` for `w != o`:
+    </p>
+    <p class="equation">
+      `
+      (del J_(NS)) / (del u_(w_d))
+      = (del - sum_(k=1)^K log(sigma(-u_k^(TT) v_c))) / (del u_(w_d))
+      = (del - log(sigma(-u_w^(TT) v_c))) / (del u_(w_d)) if w in {1...K} " or 0 otherwise"
+      `
+    </p>
+    <p>
+      Assuming `w in {1...K}`, we can proceed:
+    </p>
+    <p class="equation">
+      `
+      (del - log(sigma(-u_w^(TT) v_c))) / (del u_(w_d))
+      = -1 / (sigma(-u_w^(TT) v_c)) * sigma(-u_w^(TT) v_c) * (1 - sigma(-u_w^(TT) v_c)) * (-1) v_(c_d)
+      = -(sigma(-u_w^(TT) v_c) - 1) v_(c_d)
+      `
+    </p>
+    <p class="equation">
+      `
+      (del J_(NS)) / (del u_w)
+      = -(sigma(-u_w^(TT) v_c) -1) v_c in RR^D
+      `
+    </p>
+    <p>
+      Now we derive a gradient w.r.t. `u_o`, which is quite similar.
+    </p>
+    <p class="equation">
+      `
+      (del J_(NS)) / (del u_(o_d))
+      = (del - log(sigma(u_o^(TT) v_c))) / (del u_(o_d))
+      = - 1 / (sigma(u_o^(TT) v_c)) * sigma(u_o^(TT) v_c) * (1 - sigma(u_o^(TT) v_c)) * v_(c_d)
+      = (sigma(u_o^(TT) v_c) - 1) v_(c_d)
+      `
+    </p>
+    <p class="equation">
+      `
+      (del J_(NS)) / (del u_o)
+      = (sigma(u_o^(TT) v_c) - 1) v_c in RR^D
+      `
+    </p>
+    <p>
+      Finally, we compute the gradient w.r.t. `v_c`.
+    </p>
+    <p class="equation">
+      `
+      (del J_(NS)) / (del v_(c_d))
+      = (del - log(sigma(u_o^(TT) v_c)) - sum_(k=1)^K log(sigma(-u_k^(TT) v_c))) / (del v_(c_d))
+      = - 1 / (sigma(u_o^(TT) v_c)) * sigma(u_o^(TT) v_c) * (1 - sigma(u_o^(TT) v_c)) * u_(o_d) - sum_(k=1)^K 1 / (sigma(-u_k^(TT) v_c)) * sigma(-u_k^(TT) v_c) * (1 - sigma(-u_k^(TT) v_c)) * -u_(k_d)
+      = (sigma(u_o^(TT) v_c) - 1) * u_(o_d) - sum_(k=1)^K (sigma(-u_k^(TT) v_c) - 1) * u_(k_d)
+      `
+    </p>
+    <p class="equation">
+      `
+      (del J_(NS)) / (del v_c)
+      = (sigma(u_o^(TT) v_c) - 1) u_o - sum_(k=1)^K (sigma(-u_k^(TT) v_c) - 1) u_k
+      `
+    </p>
+
+    <h2>d) Gradients for skip-gram and CBOW models</h2>
+    <p>
+      We define `F(o,v_c)` as a placeholder for either softmax or negative sampling loss functions.
+      The loss function of skip-gram shall be `J_(SG) := J_("skip-gram") ("word"_(c-m...c+m)) = sum_(-m <= j <= m, j != 0) F(w_(c+j) v_c)` with `w_(c+j)` being the word at the i-th index relative to the center.
+    </p>
+    <p class="equation">
+      `
+      (del J_(SG)) / (del U)
+      = (del sum_(-m <= j <= m, j != 0) F(w_(c+j) v_c)) / (del U)
+      = sum_(-m <= j <= m, j != 0) (del F(w_(c+j) v_c)) / (del U)
+      `
+    </p>
+    <p class="equation">
+      `
+      (del J_(SG)) / (del v_c)
+      = (del sum_(-m <= j <= m, j != 0) F(w_(c+j) v_c)) / (del v_c)
+      = sum_(-m <= j <= m, j != 0) (del F(w_(c+j) v_c)) / (del v_c)
+      `
+    </p>
+    <p class="equation">
+      `
+      (del J_(SG)) / (del v_k)
+      = (del sum_(-m <= j <= m, j != 0) F(w_(c+j) v_c)) / (del v_k)
+      = 0 " for " k != c
+      `
+    </p>
+
+    <p>
+      Next, we do the same for a simplified version of CBOW.
+      Define `\hat(v) = sum_(-m <= j <= m, j != 0) v_(c+j)` as the sum of the context word.
+      We use `\hat(v)` to predict the center word and have as loss `J_(CB) := J_("CBOW") ("word"_(c-m...c+m)) = F(w_c, \hat(v))`.
+    </p>
+    <p class="equation">
+      `
+      (del J_(CB)) / (del U)
+      = (del F(w_c, \hat(v))) / (del U)
+      `
+    </p>
+    <p class="equation">
+      `
+      (del J_(CB)) / (del v_k)
+      = (del F(w_c, \hat(v))) / (del v_k) " for " k in {c-m ... c+m} "\" {c}
+      `
+    </p>
+    <p class="equation">
+      `
+      (del J_(CB)) / (del v_k)
+      = 0 " for " k !in {c-m ... c+m} "\" {c}
+      `
+    </p>
+
+
+
+
+
+
+
+
+
+
+	</body>
+</html>

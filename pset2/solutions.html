@@ -1,0 +1,324 @@
+<html>
+	<body>
+
+    <script type="text/javascript" async
+      src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-MML-AM_CHTML">
+    </script>
+
+    <h1 id="task1">1 - TensorFlow Softmax</h1>
+    <p>
+      Implementation task only. See code.
+    </p>
+
+    <h1 id="task2">2 - Deep Networks for NER</h1>
+
+    <p>
+      Context of the word `x_t in RR^(1 xx |V|)` shall be `x^((t)) = [x_(t-1)L, x_tL, x_(t+1)_L] in RR^(1 xx 3D)`
+    </p>
+
+    <p>
+      The embedding matrix is `L in RR^(|V| xx D)`
+    </p>
+
+    <p>
+      The hidden layer is `h = tanh(x^((t))W + b_1) in RR^(1 xx H)` with `tau = x^((t))W + b_1 in RR^(1 xx H)`
+    </p>
+
+    <p>
+      The parameters are `W in RR^(3D xx H)` and `b_1 in RR^(1 xx H)`
+    </p>
+
+    <p>
+      The predictions are `hat y = "softmax"(hU + b_2) in RR^(1 xx C)`  with `theta = hU + b_2 in RR^(1 xx C)`
+    </p>
+
+    <p>
+      The parameters are `U in RR^(H xx C)` and `b_2 in RR^(1 xx C)`
+    </p>
+
+    <p>
+      The loss is `J(theta) = CE(y, hat y) = - sum_i y_i log(hat(y)_i)`
+    </p>
+
+    <h2 id="task2_a">a) Compute gradients for all model parameters!</h2>
+
+    <h3>Softmax gradient</h3>
+
+    <p>
+      We know that `(del J) / (del theta) = "softmax"(theta) - y = hat y - y in RR ^ (1 xx C)`
+    </p>
+
+    <h3>Hidden layer gradients</h3>
+
+    <p>
+      Now go for `(del J) / (del h_i) = sum_c (del J) / (del theta_c) (del theta_c) / (del h_i)`
+    </p>
+    <p>
+      `
+        = sum_c (hat y - y)_c del / (del h_i) (hU + b_2)_c
+        = sum_c (hat y - y)_c del / (del h_i) (sum_k h_k U_(kc) + b_c)
+        = sum_c (hat y - y)_c U_(ic)
+        = (hat y - y) U_(i*)
+        = (hat y - y) (U^T)_(*i)
+      `
+    </p>
+    <p>
+      This gives `(del J) / (del h) = (hat y - y) U^T in RR^(1 xx H)`
+    </p>
+
+    <p>
+      Next we do `(del J) / (del U_(hc)) = sum_k (del J) / (del theta_k) (del theta_k) / (del U_(hc))`
+    </p>
+    <p>
+      `
+        = sum_k (hat y - y)_k del / (del U_(hc)) (hU + b_2)_k
+        = sum_k (hat y - y)_k del / (del U_(hc)) (sum_j h_j U_(jk) + b_k)
+        = (hat y - y)_c h_h
+      `
+    </p>
+    <p>
+      This gives `(del J) / (del U) = h^T(hat y - y) in RR^(H xx C)`
+    </p>
+
+    <p>
+      Now it is time for `(del J) / (del b_(2_c)) = sum_k (del J) / (del theta_k) (del theta_k) / (del b_(2_c))`
+    </p>
+    <p>
+      `
+        = sum_k (hat y - y)_k del / (del b_(2_c)) (hU + b_2)_k
+        = sum_k (hat y - y)_k del / (del b_(2_c)) (sum_j h_j U_(jk) + b_k)
+        = (hat y - y)_c
+      `
+    </p>
+    <p>
+      This gives `(del J) / (del b_2) = hat y - y in RR^(1 xx C)`
+    </p>
+
+    <h3>Input layer gradients</h3>
+
+    <p>
+      We know `tanh(x) = 2 sigma(2x) - 1` and `del / (del x) sigma(x) = sigma(x) (1 - sigma(x))`
+    </p>
+
+    <p>
+      The first task is `(del J) / (del tau_h) = (del J) / (del h_h) (del h_h) / (del tau_h)`
+    </p>
+    <p>
+      `
+        = ((hat y - y) U^T)_h (del) / (del tau_h) tanh(tau_h)
+        = ((hat y - y) U^T)_h (del) / (del tau_h) 2 sigma(2tau_h) - 1
+        = ((hat y - y) U^T)_h (4 sigma(2tau_h)(1 - sigma(2tau_h)))
+      `
+    </p>
+    <p>
+      This gives `(del J) / (del tau) = (hat y - y) U^T o. 4 sigma(2tau)(1 - sigma(2tau)) in RR^(1 xx H)`
+    </p>
+
+    <p>
+      Let's go on with `(del J) / (del x_d^((t))) = sum_h (del J) / (del tau_h) (del tau_h) / (del x_d^((t)))`
+    </p>
+    <p>
+      `
+        = sum_h (del J) / (del tau_h) del / (del x_d^((t))) (x^((t))W + b_1)_h
+        = sum_h (del J) / (del tau_h) del / (del x_d^((t))) (sum_j x_j^((t))W_(jh) + b_(1_h))
+        = sum_h (del J) / (del tau_h) W_(dh)
+        = sum_h (del J) / (del tau_h) (W^T)_(hd)
+      `
+    </p>
+    <p>
+      This gives `(del J) / (del x^((t))) = (del J) / (del tau) W^T in RR^(1 xx 3D)`
+    </p>
+
+    <p>
+      Now we do `(del J) / (del W_(dh)) = sum_k (del J) / (del tau_k) (del tau_k) / (del W_(dh))`
+    </p>
+    <p>
+      `
+        = sum_k (del J) / (del tau_k) del / (del W_(dh)) (x^((t))W + b_1)_k
+        = sum_k (del J) / (del tau_k) del / (del W_(dh)) (sum_j x_j^((t))W_(jk) + b_(1_k))
+        = (del J) / (del tau_h) x_d^((t))
+      `
+    </p>
+    <p>
+      This gives `(del J) / (del W) = (x^((t)))^T (del J) / (del tau) in RR^(3D xx H)`
+    </p>
+
+    <p>
+      Finally let's do `(del J) / (del b_(1_h)) = sum_k (del J) / (del tau_k) (del tau_k) / (del b_(1_h))`
+    </p>
+    <p>
+      `
+        = sum_k (del J) / (del tau_k) del / (del b_(1_h)) (x^((t))W + b_1)_k
+        = sum_k (del J) / (del tau_k) del / (del b_(1_h)) (sum_j x_j^((t))W_(jk) + b_(1_k))
+        = (del J) / (del tau_h)
+      `
+    </p>
+    <p>
+      This gives `(del J) / (del b_1) = (del J) / (del tau) in RR^(1 xx H)`
+    </p>
+
+    <h2 id="task2_b">b) Compute gradients with regularization!</h2>
+
+    <p>
+      Full loss is `J_"full"(theta) = J(theta) + J_"reg"(theta) = J(theta) + lambda / 2 [ sum_(i,j) W_(ij)^2 + sum_(a,b) U_(ab)^2 ]`
+    </p>
+
+    <p>
+      The first gradient is `(del J_"full"(theta)) / (del W_(dh)) = (del J(theta)) / (del W_(dh)) + (del J_"reg"(theta)) / (del W_(dh))`
+    </p>
+
+    <p>
+      `
+        = (del J(theta)) / (del W_(dh)) + del / (del W_(dh)) lambda / 2 [ sum_(i,j) W_(ij)^2 + sum_(a,b) U_(ab)^2 ]
+        = (del J(theta)) / (del W_(dh)) + lambda W_(dh)
+      `
+    </p>
+
+    <p>
+      Similarly, the second gradient is `(del J_"full"(theta)) / (del U_(hc)) = (del J(theta)) / (del U_(hc)) + (del J_"reg"(theta)) / (del U_(hc))`
+    </p>
+    <p>
+      `
+        = (del J(theta)) / (del U_(hc)) + lambda U_(hc)
+      `
+    </p>
+
+    <p>
+      Thus, we get `(del J_"full"(theta)) / (del W) = (del J(theta)) / (del W) + lambda W` and `(del J_"full"(theta)) / (del U) = (del J(theta)) / (del U) + lambda U`
+    </p>
+
+    <h1 id="task3">3 - Recurrent neural networks</h1>
+
+    <p>
+      The embedding matrix shall be `L in RR^(|V| xx D)` and is used for words  `x^((t)) in RR^(1 xx |V|)`
+    </p>
+    <p>
+      Thus, the word vector is `e^((t)) = x^((t))L in RR^(1 xx D)`
+    </p>
+
+    <p>
+      Now we define the hidden matrix `H in RR^(D_h xx D_h)`, input word transformation matrix `I in RR^(D xx D_h)`, and bias term `b_1 in RR^(1 xx D_h)`
+    </p>
+    <p>
+      Thus, the hidden layer is `h^((t)) = sigma(h^((t-1))H + e^((t))I + b_1) in RR^(1 xx D_h)` with `tau^((t)) = h^((t-1))H + e^((t))I + b_1 in RR^(1 xx D_h)`
+    </p>
+
+    <p>
+      For the output layer, we define `U in RR^(D_h xx |V|)` and a bias term `b_2 in RR^(1 xx |V|)`
+    </p>
+    <p>
+      The output then is `hat y^((t)) = "softmax"(h^((t))U + b_2) in RR^(1 xx |V|)`
+    </p>
+
+    <p>
+      We optimize unregularized cross-entropy loss `J^((t))(theta) = CE(y^((t)), hat y^((t))) = - sum_(i=1)^(|V|) y_i^((t)) log hat y_i^((t))`
+    </p>
+
+    <p>
+      We interpret the outputs as probabilities `tilde P (x_(t+1) | x_t, ... x_1) = hat y^((t))`
+    </p>
+
+
+    <h2 id="task3a">Cross-entroy error and perplexity</h2>
+
+    <p>
+      `y^((t))` is a one-hot vector. Let `y_i^((t)) = 1` without loss of generality. Then we have `CE(y^((t)), hat y^((t))) = - log hat y_i^((t)) = log 1 - log hat y_i^((t)) = log (1 / hat y_i^((t))) = log PP(y^((t)), hat y^((t)))`, where PP is the Perplexity.
+    </p>
+
+    <p>
+      The arithmetic mean of cross-entropies is `1/T sum_t CE(y^((t)), hat y^((t))) = 1/T sum_t log e^(CE(y^((t)), hat y^((t)))) = 1/T sum_t logPP(y^((t)), hat y^((t))) = sum_t (logPP(y^((t)), hat y^((t)))) / T`
+    </p>
+
+    <p>
+      When minimizing the arithmetic mean of cross-entropies, we could equivalently minimize its exponentiated form `e^(1/T sum_t CE(y^((t)), hat y^((t)))) = e^(sum_t (logPP(y^((t)), hat y^((t)))) / T) = prod_t e^((logPP(y^((t)), hat y^((t)))) / T) = prod_t PP(y^((t)), hat y^((t)))^(1/T) = (prod_t PP(y^((t)), hat y^((t))))^(1/T)`
+    </p>
+    <p>
+      Thus, we have shown that minimizing the arithmetic mean of the cross-entropies is equivalent to minimizing the geometric mean of perplexities.
+    </p>
+
+    <p>
+      When predictions are random, we expect perplexity to be `PP = 1 / (1 / |V|) = |V|` and thus `CE = log PP = log(|V|)`
+    </p>
+
+    <p>
+      For `|V| = 2000`, we thus expect `PP = 2000` and `CE = log 2000 ~~ 7.60`. Similarly, for `|V| = 10000` we expect `PP = 10000` and `CE = log 10000 ~~ 9.21`
+    </p>
+
+    <h2 id="task3b">Compute all gradients for the model in one timestep</h2>
+
+    <p>
+      The first gradient is `(del J^((t))(theta)) / (del U) = (h^((t)))^T(hat y^((t)) - y^((t))) in RR^(D_h xx |V|)`
+    </p>
+    <p>
+      The next gradient is `(del J^((t))(theta)) / (del b_2) = hat y^((t)) - y^((t)) in RR^(1 xx |V|)`
+    </p>
+    <p>
+      For the hidden layer the gradient is `(del J^((t))(theta)) / (del h^((t))) = (hat y^((t)) - y^((t)))U^T in RR^(1 xx D_h)`
+    </p>
+
+    <p>
+      The following gradients are computed only for the current timestep. That is, we do not do any backpropagation in time and rather assume `h^((t-1))` to be fixed.
+    </p>
+    <p>
+      We compute the gradient `(del J^((t))(theta)) / (del H) |_((t)) = (h^((t-1)))^T((del J^((t))(theta)) / (del h^((t))) o. (sigma(tau^((t)))(1 - sigma(tau^((t)))))) in RR^(D_h xx D_h)`
+    </p>
+    <p>
+      and also `(del J^((t))(theta)) / (del I) |_((t)) = (e^((t)))^T((del J^((t))(theta)) / (del h^((t))) o. (sigma(tau^((t)))(1 - sigma(tau^((t)))))) in RR^(D xx D_h)`
+    </p>
+    <p>
+      and finally `(del J^((t))(theta)) / (del b_1) |_((t)) = ((del J^((t))(theta)) / (del h^((t))) o. (sigma(tau^((t)))(1 - sigma(tau^((t)))))) in RR^(1 xx D_h)`
+    </p>
+
+    <p>
+      Again for all timesteps, we can compute `(del J^((t))(theta)) / (del L_(x^((t)))) = (del J^((t))(theta)) / (del L_(e^((t)))) = ((del J^((t))(theta)) / (del h^((t))) o. (sigma(tau^((t)))(1 - sigma(tau^((t))))))I^T in RR^(1 xx D)`
+    </p>
+
+    <p>
+      For the next task, we also will need the gradient w.r.t the previous hidden layer timestep `delta^((t-1)) = (del J^((t))(theta)) / (del h^((t-1))) = ((del J^((t))(theta)) / (del h^((t))) o. (sigma(tau^((t)))(1 - sigma(tau^((t))))))H^T in RR^(1 xx D_h)`
+    </p>
+
+    <h2 id="task3c">Backpropagate through time</h2>
+
+    <p>
+      Now we compute the gradients for the loss at time `t`, but for the parameters' appearance at timestep `t-1`.
+    </p>
+
+    <p>
+      We compute the gradient `(del J^((t))(theta)) / (del H) |_((t-1)) = (h^((t-2)))^T(delta^((t-1)) o. (sigma(tau^((t-1)))(1 - sigma(tau^((t-1)))))) in RR^(D_h xx D_h)`
+    </p>
+    <p>
+      and also `(del J^((t))(theta)) / (del I) |_((t)) = (e^((t-1)))^T(delta^((t-1)) o. (sigma(tau^((t-1)))(1 - sigma(tau^((t-1)))))) in RR^(D xx D_h)`
+    </p>
+    <p>
+      and finally `(del J^((t))(theta)) / (del b_1) |_((t)) = delta^((t-1)) o. (sigma(tau^((t-1)))(1 - sigma(tau^((t-1))))) in RR^(1 xx D_h)`
+    </p>
+    <p>
+      But also `(del J^((t))(theta)) / (del L_(x^((t-1)))) = (del J^((t))(theta)) / (del L_(e^((t-1)))) = (delta^((t-1)) o. (sigma(tau^((t-1)))(1 - sigma(tau^((t-1))))))I^T in RR^(1 xx D)`
+    </p>
+
+    <h2 id="task3d">Computational complexity (time)</h2>
+
+    <p>
+      Assumptions are that
+      <ul>
+        <li>Embedding lookups are linear time in the number of elements</li>
+        <li>All scalar operations (+ / * / exp / log / sigma / ...) are one elementary step</li>
+        <li>Matrix multiplication of `M in RR^(R xx S)` and `N in RR^(S xx T)` is `O(RST)`</li>
+      </ul>
+    </p>
+
+    <p>
+      For forward pass, we have `O(D_h^2 + D_h|V|) = O(D_h(D_h + |V|))`.
+    </p>
+    <p>
+      For backward pass, we have the same.
+    </p>
+    <p>
+      For multiple steps in time, we must do the same multiple times.
+    </p>
+    <p>
+      The most expensive part is computing the softmax scores `hat y^((t))` from `h^((t))`, since `|V|` will be very large.
+    </p>
+
+	</body>
+</html>

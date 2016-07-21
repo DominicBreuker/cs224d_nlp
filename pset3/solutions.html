@@ -1,0 +1,62 @@
+<html>
+	<body>
+
+    <script type="text/javascript" async
+      src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-MML-AM_CHTML">
+    </script>
+
+    <h1 id="task1">1 - Recursive Neural Network</h1>
+
+    <p>
+      We want to build a recursive neural network (given a parse tree). It's architecture is a ReLU layer followed by Softmax, formalized as follows:
+    </p>
+
+    <p>
+      Softmax loss is `CE(y, hat y) = - sum_i y_i log hat y_i` with `y,hat y in RR(1 xx 5)`, that is, we have 5 classes.
+    </p>
+    <p>
+      Our tree nodes look like this: `h^((1)) = max([h_"left"^((1)), h_"right"^((1))] W^((1)) + b^((1)), 0)`
+    </p>
+    <p>
+      We let: `theta = [h_"left"^((1)), h_"right"^((1))] W^((1)) + b^((1)) in RR^(1 xx D)`, i.e., `h^((1)) = max(theta, 0)`
+    </p>
+    <p>
+      We compute predictions as: `hat y = "softmax"(h^((1))U + b^((s)))`
+    </p>
+
+    <p>
+      The dimensions are `L in RR(|V| xx |D|)`, `W^((1)) in RR^(2D xx D)`, `b^((1)) in RR^(1 xx D)`, `U in RR^(D xx 5)` and `b^((s)) in RR^(1 xx 5)`. `h_"left"^((1))` and `h_"right"^((1))` are the vectors from the left and right subtree (possibly word vectors).
+    </p>
+
+    <h2 id="task1a">a) Derive gradients</h2>
+    <p>
+      We have an example sentence "I love this assignment" and use a tree with three nodes (see assignment3.pdf).
+    </p>
+
+    <h3>Gradients the same for all nodes</h3>
+
+    <p>
+      `(del CE(y, hat y)) / (del U) = (h^((1)))^T(y - hat y)`
+    </p>
+    <p>
+      `(del CE(y, hat y)) / (del h^((1))) = (y - hat y)U^T`
+    </p>
+    <p>
+      `(del CE(y, hat y)) / (del b^((s))) = (y - hat y)`
+    </p>
+
+    <h3>Gradients specific to node 1</h3>
+
+    <p>
+      `(del CE(y, hat y)) / (del theta_d) = (del CE(y, hat y)) / (del h^((1))_d) (del h^((1))_d) / (del theta_d)`
+    </p>
+    <p>
+      `(del CE(y, hat y)) / (del h^((1))_d) (del max(theta_d, 0) / (del theta_d) = (del CE(y, hat y)) / (del h^((1))_d) II_(theta_d > 0)`
+    </p>
+
+    <p>
+      Hence in vector notation, we have `(del CE(y, hat y)) / (del theta) = (del CE(y, hat y)) / (del h^((1))) II_(theta > 0)` where `II_(theta > 0)` is elementwise.
+    </p>
+
+	</body>
+</html>
